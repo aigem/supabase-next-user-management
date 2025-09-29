@@ -1,176 +1,76 @@
-# Supabase Next.js Auth & User Management Starter
 
-This example will set you up for a very common situation: users can sign up or sign in and then update their account with public profile information, including a profile image.
+本仓库在 Supabase 官方用户管理示例基础上，按需求增加了以下模块，遵循 KISS 原则，小步实现、可直接本地运行与演示：
 
-This demonstrates how to use:
+### 新增功能概览
+- 余额账户与扣费闭环
+  - 数据表：billing_accounts、usage_logs、payment_transactions、invite_relations、audit_logs
+  - 原子扣费 RPC：public.charge_usage，校验余额→扣减→写 usage_logs→写审计日志
+- 支付（Mock）演示闭环
+  - /api/payments/create 创建 pending 交易
+  - /api/payments/webhook 验签后入账（increment_user_balance）
+- 邀请与奖励
+  - /api/invites/register 绑定邀请关系（唯一约束）
+  - /api/invites/reward 幂等发放奖励并入账
+- 报表
+  - /api/usage/report 支持时间范围查询与 CSV 导出
+  - 前端页面 /usage 展示概览、分组与明细
+- 页面导航与演示
+  - Dashboard（/）：余额与最近使用
+  - 充值页（/recharge）：Mock 下单并模拟回调入账
+  - 报表页（/usage）：只读报表与导出
+  - 邀请页（/invites）：绑定与奖励发放演示
+  - 控制台（/console）：参数表单与扣费联动（不接入真实模型）
+  - 账户与安全（/security）：会话与审计事件只读摘要
+  - 账户中心（/account）：资料编辑、近期账务
 
-- User signups using Supabase [Auth](https://supabase.com/auth).
-  - Supabase [Auth Helpers for Next.js](https://supabase.com/docs/guides/auth/auth-helpers/nextjs).
-  - Supabase [pre-built Auth UI for React](https://supabase.com/docs/guides/auth/auth-helpers/auth-ui).
-- User avatar images using Supabase [Storage](https://supabase.com/storage)
-- Public profiles restricted with [Policies](https://supabase.com/docs/guides/auth#policies).
-- Frontend using [Next.js](<[nextjs.org/](https://nextjs.org/)>).
+### 关键路由与文件
+- API
+  - app/api/billing/deduct/route.ts：内部验签，调用 charge_usage 原子扣费
+  - app/api/billing/summary/route.ts：余额、使用、交易与邀请摘要
+  - app/api/payments/create/route.ts：创建交易
+  - app/api/payments/webhook/route.ts：HMAC 验签→更新交易→入账
+  - app/api/invites/register/route.ts：绑定邀请
+  - app/api/invites/reward/route.ts：发放奖励（内部验签）
+  - app/api/usage/report/route.ts：报表与 CSV
+- 数据库迁移
+  - supabase/migrations/20250201000000_billing_and_usage.sql：账务/使用/邀请/审计表与函数
+  - supabase/migrations/20250201010000_charge_usage.sql：原子扣费函数（charge_usage）
 
-## Technologies used
+### 环境变量
+请参考 .env.example（已提供可用于开发的默认值）：
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+- NEXT_SITE_URL 或 NEXT_PUBLIC_SITE_URL（用于页面回调与生成邀请链接）
+- PAYMENT_PROVIDER_NAME=mockpay（演示）
+- PAYMENT_CHECKOUT_ENDPOINT（演示）
+- PAYMENT_WEBHOOK_SECRET（Webhook HMAC 密钥，示例：dev_webhook_secret）
+- INTERNAL_API_KEY（内部 API 验签，示例：dev_internal_key）
+- SUPABASE_SERVICE_ROLE_KEY（仅服务端使用，勿暴露到客户端）
 
-- Frontend:
-  - [Next.js](https://github.com/vercel/next.js) - a React framework for production.
-  - [Supabase.js](https://supabase.com/docs/library/getting-started) for user management and realtime data syncing.
-  - Supabase [Auth Helpers for Next.js](https://supabase.com/docs/guides/auth/auth-helpers/nextjs).
-  - Supabase [pre-built Auth UI for React](https://supabase.com/docs/guides/auth/auth-helpers/auth-ui).
-- Backend:
-  - [supabase.com/dashboard](https://supabase.com/dashboard/): hosted Postgres database with restful API for usage with Supabase.js.
+### 本地运行步骤
+1. 安装依赖
+   - npm i 或 pnpm i
+2. 配置环境变量
+   - 复制 .env.example 为 .env，必要时调整 NEXT_SITE_URL/NEXT_PUBLIC_SITE_URL 为 http://localhost:3000
+3. 初始化数据库
+   - 使用 Supabase 本地/远程项目，确保执行 migrations 目录下的 SQL（参考 Supabase CLI db push）
+4. 启动开发
+   - npm run dev
+5. 演示流程
+   - 注册/登录 → /recharge 充值（Mock）→ 余额更新
+   - /console 参数表单扣费 → 使用日志与余额联动
+   - /usage 查看报表与 CSV 导出
+   - /invites 绑定与奖励发放演示（需 INTERNAL_API_KEY）
 
-## Instant deploy
+### 安全与最佳实践
+- 内部接口需携带 x-internal-token（INTERNAL_API_KEY），仅用于服务器侧调用，避免在浏览器暴露
+- Webhook 使用 PAYMENT_WEBHOOK_SECRET 进行 HMAC 验签与幂等状态更新
+- 所有数据访问遵循 Row Level Security（用户仅能读取自身数据）
+- service_role 仅在服务端环境使用（utils/supabase/service-role.ts）
 
-The Vercel deployment will guide you through creating a Supabase account and project. After installation of the Supabase integration, all relevant environment variables will be set up so that the project is usable immediately after deployment 🚀.
+### 后续接入建议
+- 真实支付网关（如 Stripe/微信/支付宝）：替换 create 与 webhook 的 provider 逻辑与验签
+- 更丰富的报表与图表展示
+- API 模型接入（图像/视频生成）并结合扣费联动与排队机制
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fsupabase%2Fsupabase%2Ftree%2Fmaster%2Fexamples%2Fuser-management%2Fnextjs-user-management&project-name=supabase-nextjs-user-management&repository-name=supabase-nextjs-user-management&integration-ids=oac_VqOgBHqhEoFTPzGkPd7L0iH6&external-id=https%3A%2F%2Fgithub.com%2Fsupabase%2Fsupabase%2Ftree%2Fmaster%2Fexamples%2Fuser-management%2Fnextjs-user-management)
-
-### 1. Create new project
-
-Sign up to Supabase - [https://supabase.com/dashboard](https://supabase.com/dashboard) and create a new project. Wait for your database to start.
-
-### 2. Run "User Management" Quickstart
-
-Once your database has started, head over to your project's `SQL Editor` and run the "User Management Starter" quickstart. On the `SQL editor` page, scroll down until you see `User Management Starter: Sets up a public Profiles table which you can access with your API`. Click that, then click `RUN` to execute that query and create a new `profiles` table. When that's finished, head over to the `Table Editor` and see your new `profiles` table.
-
-### 3. Get the URL and Key
-
-Go to the Project Settings (the cog icon), open the API tab, and find your API URL and `anon` key, you'll need these in the next step.
-
-The `anon` key is your client-side API key. It allows "anonymous access" to your database, until the user has logged in. Once they have logged in, the keys will switch to the user's own login token. This enables row level security for your data. Read more about this [below](#postgres-row-level-security).
-
-![image](https://user-images.githubusercontent.com/10214025/88916245-528c2680-d298-11ea-8a71-708f93e1ce4f.png)
-
-**_NOTE_**: The `service_role` key has full access to your data, bypassing any security policies. These keys have to be kept secret and are meant to be used in server environments and never on a client or browser.
-
-## Supabase details
-
-### Using a Remote Supabase Project
-
-1. Create or select a project on [Supabase Dashboard](https://supabase.com/dashboard).
-2. Copy and fill the dotenv template `cp .env.production.example .env.production`
-3. Link the remote project to your local environment:
-
-```bash
-SUPABASE_ENV=production npx supabase@latest link --project-ref <your-project-ref>
-```
-
-3. Sync the configuration:
-
-```bash
-SUPABASE_ENV=production npx supabase@latest config push
-```
-
-4. Sync the database schema:
-
-```bash
-SUPABASE_ENV=production npx supabase@latest db push
-```
-
-## Vercel Preview with Branching
-
-Supabase integrates seamlessly with Vercel's preview branches, giving each branch a dedicated Supabase project. This setup allows testing database migrations or service configurations safely before applying them to production.
-
-### Steps
-
-1. Ensure the Vercel project is linked to a Git repository.
-2. Configure the "Preview" environment variables in Vercel:
-
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-
-3. Create a new branch, make changes (e.g., update `max_frequency`), and push the branch to Git.
-   - Open a pull request to trigger Vercel + Supabase integration.
-   - Upon successful deployment, the preview environment reflects the changes.
-
-![Preview Checks](https://github.com/user-attachments/assets/db688cc2-60fd-4463-bbed-e8ecc11b1a39)
-
-### Postgres Row level security
-
-This project uses very high-level Authorization using Postgres' Row Level Security.
-When you start a Postgres database on Supabase, we populate it with an `auth` schema, and some helper functions.
-When a user logs in, they are issued a JWT with the role `authenticated` and their UUID.
-We can use these details to provide fine-grained control over what each user can and cannot do.
-
-This is a trimmed-down schema, with the policies:
-
-```sql
--- Create a table for public profiles
-create table profiles (
-  id uuid references auth.users not null primary key,
-  updated_at timestamp with time zone,
-  username text unique,
-  full_name text,
-  avatar_url text,
-  website text,
-
-  constraint username_length check (char_length(username) >= 3)
-);
--- Set up Row Level Security (RLS)
--- See https://supabase.com/docs/guides/auth/row-level-security for more details.
-alter table profiles
-  enable row level security;
-
-create policy "Public profiles are viewable by everyone." on profiles
-  for select using (true);
-
-create policy "Users can insert their own profile." on profiles
-  for insert with check ((select auth.uid()) = id);
-
-create policy "Users can update own profile." on profiles
-  for update using ((select auth.uid()) = id);
-
--- This trigger automatically creates a profile entry when a new user signs up via Supabase Auth.
--- See https://supabase.com/docs/guides/auth/managing-user-data#using-triggers for more details.
-create function public.handle_new_user()
-returns trigger as $$
-begin
-  insert into public.profiles (id, full_name, avatar_url)
-  values (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url');
-  return new;
-end;
-$$ language plpgsql security definer;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
-
--- Set up Storage!
-insert into storage.buckets (id, name)
-  values ('avatars', 'avatars');
-
--- Set up access controls for storage.
--- See https://supabase.com/docs/guides/storage#policy-examples for more details.
-create policy "Avatar images are publicly accessible." on storage.objects
-  for select using (bucket_id = 'avatars');
-
-create policy "Anyone can upload an avatar." on storage.objects
-  for insert with check (bucket_id = 'avatars');
-
-create policy "Anyone can update their own avatar." on storage.objects
-  for update using ( auth.uid() = owner ) with check (bucket_id = 'avatars');
-```
-
-## More Supabase Examples & Resources
-
-## Examples
-
-These official examples are maintained by the Supabase team:
-
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Next.js Slack Clone](https://github.com/supabase/supabase/tree/master/examples/slack-clone/nextjs-slack-clone)
-- [Next.js 13 Data Fetching](https://github.com/supabase/supabase/tree/master/examples/caching/with-nextjs-13)
-- [And more...](https://github.com/supabase/supabase/tree/master/examples)
-
-## Other resources
-
-- [[Docs] Next.js User Management Quickstart](https://supabase.com/docs/guides/getting-started/tutorials/with-nextjs)
-- [[Egghead.io] Build a SaaS product with Next.js, Supabase and Stripe](https://egghead.io/courses/build-a-saas-product-with-next-js-supabase-and-stripe-61f2bc20)
-- [[Blog] Fetching and caching Supabase data in Next.js 13 Server Components](https://supabase.com/blog/fetching-and-caching-supabase-data-in-next-js-server-components)
-
-## Authors
-
-- [Supabase](https://supabase.com)
-
-Supabase is open source. We'd love for you to follow along and get involved at https://github.com/supabase/supabase
+以上为项目功能补充与使用说明。保持 KISS 原则，已尽量以最少改动打通主要闭环，便于后续扩展与部署。

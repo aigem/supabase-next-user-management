@@ -1,0 +1,12 @@
+---
+description: 
+globs:
+alwaysApply: true
+---
+My terminal environment is powershell in windows.
+
+### 回复请使用中文。
+
+### 请遵循kiss极简原则来创建程序、编写代码等。
+
+### 程序文件尽量细分不同功能、不同模块、不同文件等。让单个你若代码文件的代码行数过多，以不超过500行为宜。

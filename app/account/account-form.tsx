@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { type User } from '@supabase/supabase-js'
 import Avatar from './avatar'
+import Button from "@/app/components/ui/Button";
 
 type BillingSummary = {
   billing: {
@@ -266,20 +267,19 @@ export default function AccountForm({ user }: { user: User | null }) {
             </div>
 
             <div>
-                <button
-                    className="button primary block"
+                <Button
                     onClick={() => updateProfile({ fullname, username, website, avatar_url })}
                     disabled={loading}
                 >
                     {loading ? 'Loading ...' : 'Update'}
-                </button>
+                </Button>
             </div>
 
             <div>
                 <form action="/auth/signout" method="post">
-                    <button className="button block" type="submit">
+                    <Button type="submit">
                         Sign out
-                    </button>
+                    </Button>
                 </form>
             </div>
             <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -287,9 +287,9 @@ export default function AccountForm({ user }: { user: User | null }) {
                     <h2 className="mainHeader" style={{ marginBottom: 0 }}>
                         账户余额
                     </h2>
-                    <button className="button" onClick={fetchSummary} disabled={summaryLoading}>
+                    <Button onClick={fetchSummary} disabled={summaryLoading}>
                         {summaryLoading ? '刷新中...' : '刷新' }
-                    </button>
+                    </Button>
                 </div>
                 {summaryError ? (
                     <p className="text-sm" style={{ color: '#ff6b6b' }}>{summaryError}</p>
@@ -313,14 +313,13 @@ export default function AccountForm({ user }: { user: User | null }) {
                         value={topupAmount}
                         onChange={(event) => setTopupAmount(event.target.value)}
                     />
-                    <button
-                        className="button primary"
+                    <Button
                         type="button"
                         onClick={handleCreatePayment}
                         disabled={paymentLoading}
                     >
                         {paymentLoading ? '创建中...' : '发起充值'}
-                    </button>
+                    </Button>
                     {paymentUrl ? (
                         <a
                             className="text-sm"

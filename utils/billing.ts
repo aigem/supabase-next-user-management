@@ -1,5 +1,29 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/utils/supabase/service-role";
+ 
+export async function chargeUsage(input: {
+  userId: string;
+  operation: string;
+  units?: number;
+  unitPrice?: number;
+  metadata?: Json;
+}) {
+  const supabase = getClient();
+  const { data, error } = await supabase.rpc("charge_usage", {
+    p_user_id: input.userId,
+    p_operation: input.operation,
+    p_units: input.units ?? 1,
+    p_unit_price: input.unitPrice ?? 0,
+    p_metadata: input.metadata ?? {},
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  // data is the new balance returned from the function
+  return Number(data ?? 0);
+}
 
 type Json = Record<string, unknown>;
 

@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  getBillingAccount,
-  deductUserBalance,
-  logUsageEvent,
-} from "@/utils/billing";
+import { getBillingAccount, chargeUsage } from "@/utils/billing";
 
 interface DeductBody {
   userId?: string;
@@ -52,45 +48,38 @@ export async function POST(request: Request) {
   const totalCost = Number((units * unitPrice).toFixed(2));
 
   try {
-    const account = await getBillingAccount(userId);
-    const currentBalance = account?.balance ?? 0;
-
-    if (currentBalance < totalCost) {
-      return NextResponse.json(
-        { error: "余额不足", balance: currentBalance },
-        { status: 422 }
-      );
-    }
-
-    await deductUserBalance(userId, totalCost, {
-      actorId: userId,
-      metadata: {
-        reason: "usage_deduction",
-        operation,
-        units,
-        unitPrice,
-        ...body.metadata,
-      },
-    });
-
-    await logUsageEvent({
+    const newBalance = await chargeUsage({
       userId,
       operation,
       units,
       unitPrice,
-      totalCost,
       metadata: body.metadata,
     });
 
-    const updatedAccount = await getBillingAccount(userId);
-
     return NextResponse.json({
       ok: true,
-      balance: updatedAccount?.balance ?? 0,
-      currency: updatedAccount?.currency ?? "CNY",
+      balance: newBalance,
+      currency: "CNY",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "扣费失败";
+
+    // Handle insufficient funds specially by returning 422 and current balance
+    if (message.includes("INSUFFICIENT_FUNDS")) {
+      try {
+        const account = await getBillingAccount(userId);
+        return NextResponse.json(
+          {
+            error: "余额不足",
+            balance: account?.balance ?? 0,
+          },
+          { status: 422 }
+        );
+      } catch {
+        // fall through to generic error
+      }
+    }
+
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
