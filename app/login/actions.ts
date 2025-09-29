@@ -4,9 +4,9 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 
-type ActionState = { error?: string }
+type ActionState = { error: string | null }
 
-export async function login(prevState: ActionState, formData: FormData): Promise<ActionState | void> {
+export async function login(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = await createClient()
 
   const data = {
@@ -22,9 +22,10 @@ export async function login(prevState: ActionState, formData: FormData): Promise
 
   revalidatePath('/', 'layout')
   redirect('/account')
+  return { error: null }
 }
 
-export async function signup(prevState: ActionState, formData: FormData): Promise<ActionState | void> {
+export async function signup(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = await createClient()
 
   const data = {
@@ -40,4 +41,5 @@ export async function signup(prevState: ActionState, formData: FormData): Promis
 
   revalidatePath('/', 'layout')
   redirect('/account')
+  return { error: null }
 }

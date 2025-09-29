@@ -4,8 +4,8 @@ import { useFormState } from 'react-dom'
 import { login, signup } from './actions'
 
 export default function LoginPage() {
-  const [loginState, loginAction] = useFormState(login, { error: '' })
-  const [signupState, signupAction] = useFormState(signup, { error: '' })
+  const [loginState, loginAction] = useFormState(login, { error: null })
+  const [signupState, signupAction] = useFormState(signup, { error: null })
 
   return (
     <div className="mx-auto max-w-sm p-4">
