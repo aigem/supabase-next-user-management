@@ -1,4 +1,3 @@
-import { createHmac } from "node:crypto";
 import { NextResponse } from "next/server";
 import {
   getTransactionById,
@@ -6,6 +5,7 @@ import {
   type PaymentStatus,
 } from "@/utils/payments";
 import { incrementUserBalance } from "@/utils/billing";
+import { verifyNotify as verifyXorpayNotify } from "@/utils/providers/xorpay";
 
 interface PaymentWebhookEvent {
   transactionId: string;
@@ -16,18 +16,11 @@ interface PaymentWebhookEvent {
   metadata?: Record<string, unknown>;
 }
 
-function verifySignature(rawBody: string, signature: string | null) {
-  const secret = process.env.PAYMENT_WEBHOOK_SECRET;
-  if (!secret) {
-    throw new Error("缺少 PAYMENT_WEBHOOK_SECRET 环境变量");
-  }
-
-  if (!signature) {
-    return false;
-  }
-
-  const digest = createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
-  return signature === digest;
+function verifySignature(rawBody: string): { ok: boolean; payload?: any } {
+  // 仅支持 XorPay 表单通知验签
+  const vx = verifyXorpayNotify(rawBody);
+  if (vx.ok) return { ok: true, payload: vx.payload };
+  return { ok: false };
 }
 
 export async function POST(request: Request) {
@@ -35,17 +28,24 @@ export async function POST(request: Request) {
 
   let event: PaymentWebhookEvent;
   try {
-    const signature =
-      request.headers.get("x-payment-signature") ?? request.headers.get("x-signature");
-    if (!verifySignature(rawBody, signature)) {
+    const verify = verifySignature(rawBody);
+    if (!verify.ok || !verify.payload) {
       return NextResponse.json({ error: "签名验证失败" }, { status: 401 });
     }
 
-    event = JSON.parse(rawBody) as PaymentWebhookEvent;
+    const p = verify.payload as Record<string, string>;
+    // 映射 XorPay 通知到内部事件
+    event = {
+      transactionId: String(p.order_id ?? ""),
+      providerTransactionId: String(p.transaction_id ?? ""),
+      status: "succeeded",
+      amount: Number(p.pay_price ?? 0),
+      userId: undefined,
+      metadata: p,
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "请求解析失败";
-    const status = message.includes("PAYMENT_WEBHOOK_SECRET") ? 500 : 400;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 
   if (!event.transactionId) {
