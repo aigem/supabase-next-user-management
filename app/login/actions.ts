@@ -21,7 +21,7 @@ export async function login(prevState: ActionState, formData: FormData): Promise
   }
 
   revalidatePath('/', 'layout')
-  redirect('/account')
+  redirect('/')
   return { ok: true, error: null }
 }
 
@@ -40,6 +40,6 @@ export async function signup(prevState: ActionState, formData: FormData): Promis
   }
 
   revalidatePath('/', 'layout')
-  redirect('/account')
+  redirect('/')
   return { ok: true, error: null }
 }

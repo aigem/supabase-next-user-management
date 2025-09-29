@@ -1,9 +1,10 @@
 'use client'
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import ThemeToggle from "../components/ThemeToggle";
 
 const items = [
-  { href: "/", label: "Dashboard" },
+  { href: "/", label: "首页" },
   { href: "/recharge", label: "充值" },
   { href: "/usage", label: "报表" },
   { href: "/invites", label: "邀请" },
@@ -14,7 +15,7 @@ const items = [
 export default function Nav() {
   const pathname = usePathname();
   return (
-    <nav className="mx-auto max-w-5xl flex items-center gap-4 p-4 text-sm">
+    <nav className="mx-auto max-w-6xl w-full flex items-center gap-4 p-4 text-sm">
       {items.map((item) => {
         const isActive =
           item.href === "/"
@@ -34,6 +35,9 @@ export default function Nav() {
           </Link>
         );
       })}
+      <div className="ml-2">
+        <ThemeToggle />
+      </div>
     </nav>
   );
 }

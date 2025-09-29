@@ -24,14 +24,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="zh-CN" className="h-full">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-neutral-50 text-neutral-900 dark:bg-zinc-950 dark:text-neutral-100`}
       >
-        <header className="border-b">
+        <header className="fixed top-0 inset-x-0 z-40 border-b bg-white/80 dark:bg-zinc-900/80 backdrop-blur">
           <Nav />
         </header>
-        {children}
+        <main className="pt-16">
+          {children}
+        </main>
       </body>
     </html>
   );
