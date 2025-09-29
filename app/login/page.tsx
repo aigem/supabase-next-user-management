@@ -1,26 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
 import { useFormState } from 'react-dom'
-import { useRouter } from 'next/navigation'
 import { login, signup } from './actions'
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [loginState, loginAction] = useFormState(login, { error: null })
-  const [signupState, signupAction] = useFormState(signup, { error: null })
-
-  useEffect(() => {
-    if (loginState && loginState.error === null) {
-      router.push('/account')
-    }
-  }, [loginState, router])
-
-  useEffect(() => {
-    if (signupState && signupState.error === null) {
-      router.push('/account')
-    }
-  }, [signupState, router])
+  const [loginState, loginAction] = useFormState(login, { ok: false, error: null })
+  const [signupState, signupAction] = useFormState(signup, { ok: false, error: null })
 
   return (
     <div className="mx-auto max-w-sm p-4">
@@ -47,7 +32,7 @@ export default function LoginPage() {
         {loginState.error && (
           <p className="text-sm text-red-600">{loginState.error}</p>
         )}
-        {loginState.error === null && (
+        {loginState.ok === true && (
           <p className="text-sm text-gray-600">登录成功，正在跳转…</p>
         )}
         <button type="submit" className="rounded bg-black px-3 py-2 text-white hover:bg-gray-800">
@@ -78,7 +63,7 @@ export default function LoginPage() {
         {signupState.error && (
           <p className="text-sm text-red-600">{signupState.error}</p>
         )}
-        {signupState.error === null && (
+        {signupState.ok === true && (
           <p className="text-sm text-gray-600">注册成功，正在跳转…</p>
         )}
         <button type="submit" className="rounded bg-black px-3 py-2 text-white hover:bg-gray-800">

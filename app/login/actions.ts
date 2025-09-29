@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 
-type ActionState = { error: string | null }
+type ActionState = { ok: boolean; error: string | null }
 
 export async function login(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = await createClient()
@@ -17,12 +17,12 @@ export async function login(prevState: ActionState, formData: FormData): Promise
   const { error } = await supabase.auth.signInWithPassword(data)
 
   if (error) {
-    return { error: error.message }
+    return { ok: false, error: error.message }
   }
 
   revalidatePath('/', 'layout')
   redirect('/account')
-  return { error: null }
+  return { ok: true, error: null }
 }
 
 export async function signup(prevState: ActionState, formData: FormData): Promise<ActionState> {
@@ -36,10 +36,10 @@ export async function signup(prevState: ActionState, formData: FormData): Promis
   const { error } = await supabase.auth.signUp(data)
 
   if (error) {
-    return { error: error.message }
+    return { ok: false, error: error.message }
   }
 
   revalidatePath('/', 'layout')
   redirect('/account')
-  return { error: null }
+  return { ok: true, error: null }
 }
